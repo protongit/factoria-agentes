@@ -1,6 +1,6 @@
 {
   "name": "factoria-agentes",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "description": "Plataforma web multiusuario para orquestar agentes de IA que desarrollan software de forma automatizada",
