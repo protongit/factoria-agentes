@@ -1,0 +1,47 @@
+name: Mejora
+description: Proponer una funcionalidad o mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema o necesidad
+      description: ¿Qué problema resuelve esta propuesta?
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Describe la solución que imaginas.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Web / UI
+        - API
+        - Worker / orquestación
+        - Modelos y proveedores
+        - RAG / memoria
+        - Observabilidad
+        - Método / gobernanza
+        - Documentación
+        - Otro
+    validations:
+      required: true
+  - type: checkboxes
+    id: comprobaciones
+    attributes:
+      label: Comprobaciones
+      options:
+        - label: He revisado que no incluyo secretos.
+          required: true
+        - label: He buscado una propuesta duplicada.
+          required: true

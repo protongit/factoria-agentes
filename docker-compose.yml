@@ -1,0 +1,140 @@
+name: factoria-agentes
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-factoria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-factoria}
+      POSTGRES_DB: ${POSTGRES_DB:-factoria}
+    volumes:
+      - data-pg:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-factoria}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - data-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - internal
+
+  # Proxy restringido al socket de Docker: solo expone los endpoints que la
+  # plataforma necesita (crear/arrancar/parar/inspeccionar/logs de contenedores).
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.2
+    environment:
+      CONTAINERS: "1"
+      IMAGES: "1"
+      NETWORKS: "1"
+      POST: "1"
+      EXEC: "1"
+      LOGS: "1"
+      INFO: "1"
+      PING: "1"
+    volumes:
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    networks:
+      - internal
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      NODE_ENV: production
+      API_PORT: "4000"
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgres://${POSTGRES_USER:-factoria}:${POSTGRES_PASSWORD:-factoria}@postgres:5432/${POSTGRES_DB:-factoria}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      WORKSPACES_ROOT: /workspaces
+      WORKSPACES_HOST_ROOT: ${WORKSPACES_HOST_ROOT:-./.workspaces}
+      DOCKER_PROXY_URL: http://docker-socket-proxy:2375
+      PROJECT_CONTAINER_IMAGE: ${PROJECT_CONTAINER_IMAGE:-factoria/project-dev:latest}
+      PROJECT_NETWORK_CLOSED: factoria-agentes_projects
+      PROJECT_NETWORK_OPEN: factoria-agentes_internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    volumes:
+      - ${WORKSPACES_HOST_ROOT:-./.workspaces}:/workspaces
+    networks:
+      - internal
+      # Para poder consultar/arrancar la app de cada proyecto (red cerrada).
+      - projects
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-factoria}:${POSTGRES_PASSWORD:-factoria}@postgres:5432/${POSTGRES_DB:-factoria}
+      REDIS_URL: redis://redis:6379
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      WORKSPACES_ROOT: /workspaces
+      WORKSPACES_HOST_ROOT: ${WORKSPACES_HOST_ROOT:-./.workspaces}
+      OPENCODE_BIN: opencode
+      OPENCODE_AUTO: "1"
+      OPENCODE_START_TIMEOUT: "300000"
+      AGENT_PROMPT_RETRIES: ${AGENT_PROMPT_RETRIES:-2}
+      WORKER_CONCURRENCY: "4"
+      DOCKER_PROXY_URL: http://docker-socket-proxy:2375
+      PROJECT_CONTAINER_IMAGE: ${PROJECT_CONTAINER_IMAGE:-factoria/project-dev:latest}
+      PROJECT_NETWORK_CLOSED: factoria-agentes_projects
+      PROJECT_NETWORK_OPEN: factoria-agentes_internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ${WORKSPACES_HOST_ROOT:-./.workspaces}:/workspaces
+    networks:
+      - internal
+      - projects
+    # Escalado horizontal: docker compose up --scale worker=3
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    depends_on:
+      - api
+    ports:
+      - "8088:80"
+    networks:
+      - internal
+
+  # mcp-project (Project Info MCP) se añade en F8.
+
+networks:
+  internal:
+    driver: bridge
+  # Red sin egreso a Internet para los contenedores de proyecto (modo "closed").
+  projects:
+    driver: bridge
+    internal: true
+
+volumes:
+  data-pg:
+  data-redis:

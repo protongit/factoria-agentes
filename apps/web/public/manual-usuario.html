@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manual de usuario — Factoría de Agentes</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#131a26; --panel-2:#0e1420; --border:#243043;
+    --text:#e6edf6; --muted:#8b9bb4; --accent:#4f8cff; --ok:#35c07f;
+    --warn:#f0b429; --err:#ff6b6b; --code:#0a0e16;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:linear-gradient(180deg,#0b0f17 0%,#0a0d14 100%); color:var(--text);
+    font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,kbd,pre{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  code{background:var(--code); border:1px solid var(--border); border-radius:6px; padding:.1em .35em; font-size:.9em}
+  kbd{background:var(--panel-2); border:1px solid var(--border); border-bottom-width:2px; border-radius:6px; padding:.05em .4em; font-size:.85em}
+  pre{background:var(--code); border:1px solid var(--border); border-radius:10px; padding:.8rem 1rem; overflow:auto}
+
+  .layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:2rem; max-width:1280px; margin:0 auto; padding:1.5rem}
+  @media (max-width:960px){ .layout{grid-template-columns:1fr} .toc{position:static !important; height:auto !important} }
+
+  header.top{
+    grid-column:1 / -1; border:1px solid var(--border); border-radius:16px;
+    background:radial-gradient(1200px 300px at 10% 0%, #16213a 0%, var(--panel) 60%);
+    padding:2rem 2rem 1.6rem; margin-bottom:.5rem;
+  }
+  header.top h1{margin:0 0 .3rem; font-size:1.9rem}
+  header.top p{margin:.2rem 0; color:var(--muted)}
+  .pill{display:inline-block; background:var(--accent); color:#fff; border-radius:999px; padding:.15rem .7rem; font-size:.78rem; font-weight:700; margin-right:.4rem}
+
+  nav.toc{
+    position:sticky; top:1.5rem; align-self:start; height:calc(100vh - 3rem); overflow:auto;
+    border:1px solid var(--border); border-radius:14px; background:var(--panel); padding:1rem 1.1rem;
+  }
+  nav.toc h2{margin:.2rem 0 .8rem; font-size:.95rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  nav.toc ol{margin:0; padding-left:1.1rem}
+  nav.toc li{margin:.28rem 0}
+  nav.toc a{color:var(--text)}
+  nav.toc a:hover{color:var(--accent)}
+
+  main{min-width:0}
+  section{
+    border:1px solid var(--border); border-radius:14px; background:var(--panel);
+    padding:1.4rem 1.6rem; margin:0 0 1.1rem;
+  }
+  section h2{margin:.1rem 0 .8rem; font-size:1.35rem; border-bottom:1px solid var(--border); padding-bottom:.5rem}
+  section h3{margin:1.2rem 0 .5rem; font-size:1.05rem}
+  section h4{margin:1rem 0 .35rem; font-size:.98rem; color:var(--muted)}
+  p,li{color:var(--text)}
+  .muted{color:var(--muted)}
+  ol,ul{padding-left:1.3rem}
+  li{margin:.25rem 0}
+
+  table{width:100%; border-collapse:collapse; margin:.6rem 0; font-size:.95rem}
+  th,td{border:1px solid var(--border); padding:.5rem .6rem; text-align:left; vertical-align:top}
+  th{background:var(--panel-2); color:var(--muted); font-weight:600}
+
+  .callout{border-left:4px solid var(--accent); background:var(--panel-2); border-radius:8px; padding:.7rem .9rem; margin:.7rem 0}
+  .callout.tip{border-left-color:var(--ok)}
+  .callout.warn{border-left-color:var(--warn)}
+  .callout .label{font-weight:700; margin-right:.35rem}
+  .callout.tip .label{color:var(--ok)}
+  .callout.warn .label{color:var(--warn)}
+  .callout .label{color:var(--accent)}
+
+  .badge{display:inline-block; border:1px solid var(--border); border-radius:999px; padding:.05rem .5rem; font-size:.78rem; color:var(--muted)}
+  hr{border:none; border-top:1px solid var(--border); margin:1rem 0}
+  .totop{font-size:.85rem}
+  .shot{margin:.9rem 0; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#0a0e16}
+  .shot img{display:block; width:100%; height:auto}
+  .shot figcaption{padding:.5rem .8rem; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border)}
+  footer{grid-column:1 / -1; color:var(--muted); text-align:center; padding:1rem 0 2rem; font-size:.9rem}
+
+  @media print{
+    :root{--bg:#fff;--panel:#fff;--panel-2:#fff;--border:#ccc;--text:#111;--muted:#555;--accent:#1a4fb8}
+    body{background:#fff}
+    .layout{display:block; max-width:none}
+    nav.toc{display:none}
+    section{break-inside:avoid; border-color:#ccc}
+    a{color:#111}
+    header.top{background:#fff}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <header class="top">
+    <span class="pill">Manual de usuario</span>
+    <h1>Factoría de Agentes</h1>
+    <p>Guía paso a paso para construir programas con ayudantes automáticos de inteligencia artificial.</p>
+    <p class="muted">Pensado para cualquier persona, sin conocimientos de gestión de proyectos ni de programación.</p>
+  </header>
+
+  <nav class="toc" aria-label="Índice">
+    <h2>Índice</h2>
+    <ol>
+      <li><a href="#que-es">¿Qué es?</a></li>
+      <li><a href="#entrar">Entrar en la aplicación</a></li>
+      <li><a href="#pantalla">Conocer la pantalla y el menú</a></li>
+      <li><a href="#proveedores">Dar de alta proveedores y modelos</a></li>
+      <li><a href="#flujos">Crear un flujo de trabajo</a></li>
+      <li><a href="#proyecto">Crear un proyecto</a></li>
+      <li><a href="#definicion">Completar la definición</a></li>
+      <li><a href="#lanzar">Lanzar y seguir el desarrollo</a></li>
+      <li><a href="#aprobar">Aprobar un paso</a></li>
+      <li><a href="#archivos">Ver el código y los archivos</a></li>
+      <li><a href="#costes">Consultar los costes</a></li>
+      <li><a href="#asistente">Hablar con el asistente</a></li>
+      <li><a href="#recorrido">Recorrido completo de ejemplo</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+      <li><a href="#glosario">Glosario</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="que-es">
+      <h2>1. ¿Qué es Factoría de Agentes?</h2>
+      <p>
+        Imagina que quieres que alguien te construya un programa (por ejemplo, un juego, una web o una
+        aplicación), pero en lugar de contratar a programadores, se lo pides a unos
+        <strong>ayudantes automáticos</strong> que trabajan solos, en cadena, siguiendo tus instrucciones.
+      </p>
+      <p>Eso es lo que hace esta aplicación:</p>
+      <ul>
+        <li><strong>Tú describes lo que quieres</strong> (el objetivo, qué debe hacer el programa, qué debe cumplir).</li>
+        <li><strong>Tú decides el orden de las tareas</strong> (quién hace qué y cuándo). A ese orden se le llama <strong>flujo de trabajo</strong>.</li>
+        <li><strong>La aplicación lanza a los ayudantes</strong>, que van programando, revisando su propio trabajo y documentando el resultado.</li>
+        <li><strong>Tú lo ves todo en tiempo real</strong>: en qué paso está, qué está haciendo y qué archivos va creando.</li>
+      </ul>
+      <div class="callout"><span class="label">Antes de empezar:</span> los ayudantes son programas de inteligencia artificial que hay que “dar de alta” una sola vez (con su servicio y su modelo). Eso se explica en el <a href="#proveedores">apartado 4</a>.</div>
+    </section>
+
+    <section id="entrar">
+      <h2>2. Entrar en la aplicación</h2>
+
+      <h3>2.1 Abrir la aplicación</h3>
+      <ol>
+        <li>Abre tu navegador (Chrome, Firefox, Edge…).</li>
+        <li>Escribe la dirección en la barra superior: <code>http://localhost:8088</code> (en tu instalación puede ser otra).</li>
+        <li>Pulsa <kbd>Intro</kbd>.</li>
+      </ol>
+      <p>Verás una pantalla oscura con el texto <strong>“Factoría de Agentes”</strong> y dos pestañas: <strong>Entrar</strong> y <strong>Registrarse</strong>.</p>
+
+      <h3>2.2 Crear tu cuenta (solo la primera vez)</h3>
+      <ol>
+        <li>Pulsa la pestaña <strong>Registrarse</strong>.</li>
+        <li>Rellena <strong>Nombre</strong>, <strong>Email</strong> y <strong>Contraseña</strong> (mínimo 8 caracteres).</li>
+        <li>Pulsa <strong>Crear cuenta</strong>. Entrarás directamente con la sesión iniciada.</li>
+      </ol>
+      <div class="callout tip"><span class="label">Cuenta de prueba:</span> si es una demostración, puede existir un usuario <code>demo@factoria.dev</code> con contraseña <code>demo12345</code>.</div>
+
+      <figure class="shot"><img src="manual/01-login.jpg" alt="Pantalla de acceso: pestañas Entrar / Registrarse." loading="lazy" /><figcaption>Pantalla de acceso: pestañas Entrar / Registrarse.</figcaption></figure>
+
+      <h3>2.3 Entrar si ya tienes cuenta</h3>
+      <ol>
+        <li>En la pestaña <strong>Entrar</strong>, escribe tu <strong>Email</strong> y <strong>Contraseña</strong>.</li>
+        <li>Pulsa <strong>Entrar</strong>.</li>
+      </ol>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="pantalla">
+      <h2>3. Conocer la pantalla y el menú</h2>
+      <p>A la izquierda tienes una <strong>barra lateral</strong> (el menú). De arriba abajo:</p>
+      <table>
+        <thead><tr><th>Elemento</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Proyectos</strong></td><td>Tus programas. Es lo primero que verás al entrar.</td></tr>
+          <tr><td><strong>Flujos de trabajo</strong></td><td>Los “planos” que indican el orden de las tareas.</td></tr>
+          <tr><td><strong>Subagentes</strong></td><td>Ayudantes especializados (revisor, explorador, escritor de tests…).</td></tr>
+          <tr><td><strong>Proveedores y modelos</strong></td><td>Los servicios de IA que usan los ayudantes.</td></tr>
+          <tr><td><strong>ES · English</strong></td><td>Cambia el idioma de los menús.</td></tr>
+          <tr><td><strong>Tu nombre y email</strong></td><td>Datos de tu sesión.</td></tr>
+          <tr><td><strong>Salir</strong></td><td>Cierra tu sesión.</td></tr>
+        </tbody>
+      </table>
+      <p>El botón <strong>«</strong> (arriba a la izquierda) oculta el menú para aprovechar toda la pantalla; cuando está oculto aparece un botón <strong>»</strong> para recuperarlo.</p>
+      <div class="callout"><span class="label">Qué verás:</span> el contenido se carga en el centro-derecha. Los cambios no hay que “guardarlos como archivos”: basta con pulsar los botones de guardar.</div>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="proveedores">
+      <h2>4. Paso previo: dar de alta los “ayudantes”</h2>
+      <p>Antes de crear proyectos hay que decirle a la aplicación <strong>qué servicios de inteligencia artificial</strong> puede usar. Se hace una sola vez.</p>
+
+      <h3>4.1 Qué es un “proveedor” y un “modelo”</h3>
+      <ul>
+        <li><strong>Proveedor</strong>: la empresa o servicio de IA (Anthropic, OpenAI, NaN…).</li>
+        <li><strong>Modelo</strong>: la “versión” concreta del ayudante (Claude Sonnet, DeepSeek…).</li>
+      </ul>
+
+      <h3>4.2 Dar de alta un proveedor</h3>
+      <ol>
+        <li>En el menú, pulsa <strong>Proveedores y modelos</strong>.</li>
+        <li>En el panel <strong>Proveedores</strong> rellena <strong>Nombre</strong> (p. ej. <em>Anthropic</em>) y <strong>API key</strong> (la clave secreta que te da el proveedor, tipo <code>sk-…</code>).</li>
+        <li>Pulsa <strong>Añadir proveedor</strong>.</li>
+      </ol>
+      <div class="callout warn"><span class="label">Importante:</span> la API key es como la llave de tu casa con ese servicio. La aplicación la guarda cifrada y no la muestra.</div>
+
+      <h3>4.3 Dar de alta un modelo</h3>
+      <ol>
+        <li>En el panel <strong>Modelos</strong> elige el <strong>Proveedor</strong>.</li>
+        <li>Rellena <strong>ID del modelo</strong> (nombre técnico, p. ej. <code>anthropic/claude-sonnet-4-6</code>), <strong>Nombre visible</strong> y marca las <strong>Capacidades</strong>.</li>
+        <li>Pulsa <strong>Añadir modelo</strong>.</li>
+      </ol>
+      <h4>Capacidades</h4>
+      <table>
+        <thead><tr><th>Capacidad</th><th>Qué significa</th></tr></thead>
+        <tbody>
+          <tr><td><code>code</code></td><td>Escribe código.</td></tr>
+          <tr><td><code>reasoning</code></td><td>Razona y resuelve problemas.</td></tr>
+          <tr><td><code>toolUse</code></td><td>Usa herramientas (leer/escribir archivos, etc.).</td></tr>
+          <tr><td><code>structuredOutput</code></td><td>Responde de forma ordenada (para decisiones automáticas).</td></tr>
+          <tr><td><code>longContext</code></td><td>Maneja textos largos.</td></tr>
+          <tr><td><code>vision</code></td><td>Entiende imágenes.</td></tr>
+          <tr><td><code>embeddings</code> / <code>rerank</code></td><td>Permiten buscar dentro de tus documentos (RAG).</td></tr>
+          <tr><td><code>imageGeneration</code></td><td>Crea imágenes (bocetos).</td></tr>
+        </tbody>
+      </table>
+      <div class="callout tip"><span class="label">Consejo:</span> para un proyecto normal basta un modelo con <code>code</code> y <code>reasoning</code>. Si subirás documentos, añade uno con <code>embeddings</code> y otro con <code>rerank</code>.</div>
+
+      <figure class="shot"><img src="manual/03-proveedores.jpg" alt="Proveedores y modelos: alta de un modelo y sus capacidades." loading="lazy" /><figcaption>Proveedores y modelos: alta de un modelo y sus capacidades.</figcaption></figure>
+
+      <h3>4.4 Subagentes (ayudantes especializados) — opcional</h3>
+      <ol>
+        <li>En el menú, pulsa <strong>Subagentes</strong>.</li>
+        <li>Pulsa <strong>Cargar plantillas (12)</strong> para tener una docena de ayudantes especializados listos.</li>
+        <li>Puedes ver cómo quedaría cada uno con <strong>Ver fichero</strong>, o crear el tuyo en <strong>Nuevo subagente</strong>.</li>
+      </ol>
+      <p>No es obligatorio, pero usar el <strong>documentador</strong> o el <strong>revisor</strong> mejora los resultados.</p>
+
+      <figure class="shot"><img src="manual/04-subagentes.jpg" alt="Subagentes: catálogo de ayudantes especializados." loading="lazy" /><figcaption>Subagentes: catálogo de ayudantes especializados.</figcaption></figure>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="flujos">
+      <h2>5. Crear un flujo de trabajo</h2>
+      <p>El <strong>flujo</strong> es el “plano” del desarrollo: cajas (tareas) conectadas por flechas que indican el orden. Por ejemplo: <em>programar → revisar → documentar</em>.</p>
+
+      <h3>5.1 Crear un flujo desde una plantilla (recomendado)</h3>
+      <ol>
+        <li>En el menú, pulsa <strong>Flujos de trabajo</strong>.</li>
+        <li>En la zona <strong>Plantillas</strong> verás varios planos ya hechos (p. ej. “Bucle de revisión estricta”).</li>
+        <li>Pulsa <strong>Usar plantilla</strong>. Se abre el flujo listo para ajustar.</li>
+
+      <figure class="shot"><img src="manual/05-flujos.jpg" alt="Flujos de trabajo: galería de plantillas y listado." loading="lazy" /><figcaption>Flujos de trabajo: galería de plantillas y listado.</figcaption></figure>
+      </ol>
+
+      <h3>5.2 Crear un flujo desde cero</h3>
+      <ol>
+        <li>Pulsa <strong>Nuevo flujo</strong>.</li>
+        <li>Añade tareas desde la <strong>paleta de nodos</strong> (izquierda).</li>
+        <li>Haz clic en una caja y configura en el panel <strong>Configuración</strong>: Nombre, Tipo, Descripción, Resultado esperado, Directorio de trabajo, Subagente, Modelo y Join.</li>
+        <li>Conecta cajas arrastrando desde el punto derecho de una hasta el punto izquierdo de otra. La flecha puede ser <strong>éxito</strong> o <strong>fallo</strong>.</li>
+        <li>Pulsa <strong>Guardar</strong>.</li>
+      </ol>
+      <h4>Tipos de caja más útiles</h4>
+      <table>
+        <thead><tr><th>Caja</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tarea</strong></td><td>Un ayudante hace un trabajo (programar, crear un archivo…).</td></tr>
+          <tr><td><strong>Revisor</strong></td><td>Comprueba el trabajo y decide si está bien.</td></tr>
+          <tr><td><strong>Aprobación</strong></td><td>El desarrollo se pausa hasta que tú apruebes.</td></tr>
+          <tr><td><strong>Contratos</strong></td><td>Comprueba que se cumplen tus criterios de aceptación.</td></tr>
+          <tr><td><strong>Bucle / Condición</strong></td><td>Repite o decide caminos.</td></tr>
+          <tr><td><strong>Nota</strong> (✎)</td><td>Una nota para ti; no ejecuta nada.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout"><span class="label">Qué verás:</span> las cajas se colorean por tipo. Si te lías, pulsa <strong>Auto-ordenar</strong>. Con <strong>↶</strong> y <strong>↷</strong> deshaces/rehaces (se recuerda aunque cierres el navegador).</div>
+
+      <figure class="shot"><img src="manual/06-editor.jpg" alt="Editor de flujo: paleta de nodos, lienzo y panel de configuración." loading="lazy" /><figcaption>Editor de flujo: paleta de nodos, lienzo y panel de configuración.</figcaption></figure>
+
+      <h3>5.3 Herramientas del editor</h3>
+      <ul>
+        <li><strong>Versiones</strong>: “fotos” del flujo; puedes <strong>Restaurar</strong> una anterior.</li>
+        <li><strong>Variables</strong>: valores reutilizables; se usan como <code>{{ vars.nombre }}</code>.</li>
+        <li><strong>Probar nodo</strong>: ejecuta solo ese paso y muestra el resultado, sin lanzar todo.</li>
+        <li><strong>Exportar</strong> / <strong>Importar JSON</strong>: guardar y recuperar flujos en un archivo.</li>
+      </ul>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="proyecto">
+      <h2>6. Crear un proyecto</h2>
+      <p>Un <strong>proyecto</strong> es el programa que quieres construir.</p>
+      <ol>
+        <li>En el menú, pulsa <strong>Proyectos</strong>.</li>
+        <li>Pulsa <strong>+ Nuevo proyecto</strong>.</li>
+        <li>Rellena:
+          <ul>
+            <li><strong>Nombre</strong> (p. ej. <em>Mi juego</em>).</li>
+            <li><strong>Nombre del programa</strong> (p. ej. <em>JuegoPang</em>).</li>
+            <li><strong>Objetivo</strong>: qué quieres conseguir, en tus palabras.</li>
+            <li><strong>Flujo de trabajo</strong>: el que creaste.</li>
+          </ul>
+        </li>
+        <li>Pulsa <strong>Crear proyecto</strong>. Entras en su ficha.</li>
+      </ol>
+      <div class="callout"><span class="label">Qué verás:</span> arriba, el nombre con una etiqueta de estado (<code>draft</code> = borrador, <code>completed</code> = completado…).</div>
+
+      <figure class="shot"><img src="manual/02-proyectos.jpg" alt="Proyectos: listado y botón de creación." loading="lazy" /><figcaption>Proyectos: listado y botón de creación.</figcaption></figure>
+      <p class="muted">Para borrar un proyecto: en la lista de <strong>Proyectos</strong>, usa la opción de borrar de su tarjeta.</p>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="definicion">
+      <h2>7. Completar la definición del proyecto</h2>
+      <p>Al abrir un proyecto verás <strong>pestañas</strong> arriba. Vamos una por una.</p>
+
+      <h3>7.1 General</h3>
+      <ul>
+        <li><strong>Objetivo</strong> y <strong>Descripción</strong>: afina lo que quieres.</li>
+        <li><strong>Stack</strong>: tecnologías con las que se construirá (p. ej. <code>javascript</code>). Si no lo sabes, déjalo vacío.</li>
+        <li><strong>Flujo de trabajo</strong>: cambia el flujo asignado.</li>
+        <li><strong>Modelo del asistente</strong>, <strong>Modelo de embeddings (RAG)</strong> y <strong>Modelo de rerank</strong>.</li>
+        <li><strong>Guardar cambios</strong>.</li>
+
+      <figure class="shot"><img src="manual/07-proyecto-general.jpg" alt="Pestaña General: definición, modelos y presupuesto." loading="lazy" /><figcaption>Pestaña General: definición, modelos y presupuesto.</figcaption></figure>
+      </ul>
+
+      <h3>7.2 Funcionalidades</h3>
+      <ol>
+        <li>Escribe una funcionalidad (p. ej. “El personaje salta con la barra espaciadora”).</li>
+        <li>Pulsa <strong>Añadir</strong>. Repite para cada una.</li>
+
+      <figure class="shot"><img src="manual/08-funcionalidades.jpg" alt="Funcionalidades del proyecto." loading="lazy" /><figcaption>Funcionalidades del proyecto.</figcaption></figure>
+      </ol>
+
+      <h3>7.3 Contratos (criterios de aceptación)</h3>
+      <p>Son las condiciones que deben cumplirse para dar el proyecto por terminado.</p>
+      <ol>
+        <li>Rellena <strong>Título</strong>, <strong>Verificación</strong> y <strong>Criterio de aceptación</strong>.</li>
+        <li>Pulsa <strong>Añadir contrato</strong>.</li>
+      </ol>
+      <table>
+        <thead><tr><th>Verificación</th><th>Cómo se comprueba</th></tr></thead>
+        <tbody>
+          <tr><td><strong>juez IA</strong></td><td>Una IA lee el resultado y decide si se cumple.</td></tr>
+          <tr><td><strong>comando</strong></td><td>Se ejecuta una orden técnica (p. ej. comprobar que existe un archivo).</td></tr>
+          <tr><td><strong>manual</strong></td><td>Lo decides tú.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn"><span class="label">Importante:</span> el proyecto <strong>no se marcará como “completado”</strong> hasta que todos los contratos estén cumplidos.</div>
+
+      <figure class="shot"><img src="manual/09-contratos.jpg" alt="Contratos (criterios de aceptación)." loading="lazy" /><figcaption>Contratos (criterios de aceptación).</figcaption></figure>
+
+      <h3>7.4 Documentación</h3>
+      <ul>
+        <li><strong>Añadir documento (texto)</strong>: escribe Título, pega un texto y pulsa <strong>Añadir documento</strong>.</li>
+        <li><strong>Subir documento (PDF, XML, TXT…)</strong>: pulsa <strong>⬆ Subir documento</strong>, elige el archivo. La aplicación <strong>extrae el texto</strong> y lo añade a la base de conocimiento.</li>
+        <li><strong>Generar imagen (bocetos)</strong>: elige <strong>Modelo de imagen</strong>, escribe un <strong>Prompt</strong> y pulsa <strong>Generar imagen</strong>.</li>
+        <li><strong>RAG · búsqueda</strong>: escribe y pulsa <strong>Buscar</strong>. <strong>Reindexar todo</strong> vuelve a procesar la documentación.</li>
+        <li><strong>Memoria de largo plazo</strong>: escribe una decisión y pulsa <strong>Recordar</strong>; luego <strong>Buscar</strong>.</li>
+      </ul>
+      <div class="callout"><span class="label">Qué verás:</span> la etiqueta <code>indexed</code> indica que el documento ya es buscable.</div>
+
+      <figure class="shot"><img src="manual/10-documentacion.jpg" alt="Documentación: subir PDF, generar imágenes y búsqueda RAG." loading="lazy" /><figcaption>Documentación: subir PDF, generar imágenes y búsqueda RAG.</figcaption></figure>
+
+      <h3>7.5 Flujo</h3>
+      <ul>
+        <li>Los pasos <strong>no ejecutados</strong> se ven en <strong>gris</strong>.</li>
+        <li><strong>En ejecución</strong> en azul (resaltado), <strong>completados</strong> en verde, <strong>fallidos</strong> en rojo.</li>
+        <li>Si un paso se repite (bucle), se pinta en <strong>naranja</strong> con una etiqueta <strong>×N</strong>.</li>
+        <li>Usa los controles de <strong>zoom</strong> (＋, －, encuadrar).</li>
+
+      <figure class="shot"><img src="manual/06-editor.jpg" alt="Diagrama del flujo con estados y controles de zoom (vista del editor)." loading="lazy" /><figcaption>Diagrama del flujo con estados y controles de zoom (vista del editor).</figcaption></figure>
+      </ul>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="lanzar">
+      <h2>8. Lanzar el desarrollo y seguirlo en vivo</h2>
+
+      <h3>8.1 Lanzar</h3>
+      <ol>
+        <li>En la cabecera del proyecto, pulsa <strong>▶ Lanzar ejecución</strong>.</li>
+        <li>La aplicación avisa “Ejecución lanzada” y te lleva a <strong>Ejecuciones</strong>.</li>
+      </ol>
+      <div class="callout warn"><span class="label">Importante:</span> aunque cierres el navegador, <strong>el desarrollo sigue funcionando</strong> en el servidor. Al volver verás todo lo ocurrido.</div>
+
+      <h3>8.2 Ver qué está pasando</h3>
+      <ul>
+        <li><strong>Observabilidad en vivo</strong>: una ventana donde van apareciendo los mensajes, en orden.</li>
+        <li><strong>Pausar</strong> / <strong>Reanudar</strong> / <strong>Cancelar</strong> el proceso.</li>
+        <li><strong>Ver trazas</strong>: árbol de actividad (qué paso, cuánto tardó, cuántos <em>tokens</em> gastó) y <strong>Exportar OTLP</strong>.</li>
+        <li>Etiqueta con <strong>tokens</strong> y <strong>coste</strong> de la ejecución.</li>
+      </ul>
+      <p class="muted">Estados: <code>queued</code> (en cola), <code>running</code> (en marcha), <code>paused</code> (en pausa), <code>succeeded</code> (terminó bien), <code>failed</code> (falló), <code>cancelled</code> (cancelado).</p>
+
+      <figure class="shot"><img src="manual/13-ejecuciones.jpg" alt="Ejecuciones: observabilidad en vivo, controles y trazas." loading="lazy" /><figcaption>Ejecuciones: observabilidad en vivo, controles y trazas.</figcaption></figure>
+
+      <h3>8.3 Si un paso falla</h3>
+      <p>Si el flujo está preparado para corregir (bucle), <strong>se repetirá solo</strong> con indicaciones de qué arreglar. Si no, verás <strong>↻ Reejecutar desde «paso»</strong> para volver a empezar desde ese paso, sin repetir lo que ya estaba bien.</p>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="aprobar">
+      <h2>9. Aprobar un paso (cuando el flujo lo pida)</h2>
+      <p>Algunos flujos incluyen un paso de <strong>Aprobación</strong> para que decidas antes de seguir.</p>
+      <ol>
+        <li>Cuando el proceso llegue a ese paso, la ejecución se <strong>pausa</strong> y aparece <strong>Aprobaciones pendientes</strong>.</li>
+        <li>Pulsa <strong>Aprobar</strong> para continuar o <strong>Rechazar</strong> para que se corrija.</li>
+        <li>Tras aprobar, el proceso se reanuda solo.</li>
+      </ol>
+      <div class="callout tip"><span class="label">Tip:</span> si quieres un desarrollo <strong>totalmente automático</strong>, usa un flujo sin pasos de aprobación.</div>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="archivos">
+      <h2>10. Ver el código y los archivos que se generan</h2>
+      <p>En la pestaña <strong>Archivos</strong> puedes explorar todo lo que los ayudantes han creado.</p>
+      <ol>
+        <li><strong>Explorador</strong> (izquierda): navega por las carpetas. Usa las “migas de pan” (raíz / carpeta) para volver atrás. <strong>Refrescar</strong> muestra lo nuevo.</li>
+        <li><strong>Visor</strong> (derecha): haz clic en un archivo para ver su contenido. Si es muy grande, se recorta; si es binario, lo indica.</li>
+      </ol>
+      <p class="muted">Aquí comprobarás, por ejemplo, que se han creado <code>index.html</code>, <code>game.js</code> y <code>README.md</code>.</p>
+
+      <figure class="shot"><img src="manual/12-archivos.jpg" alt="Archivos: explorador y visor del código generado." loading="lazy" /><figcaption>Archivos: explorador y visor del código generado.</figcaption></figure>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="costes">
+      <h2>11. Consultar los costes</h2>
+      <p>Los ayudantes consumen <em>tokens</em> que tienen un coste. En <strong>General → Presupuesto y coste</strong>:</p>
+      <ul>
+        <li><strong>Consumo</strong> actual (tokens y coste acumulado).</li>
+        <li><strong>Límite blando</strong> y <strong>Límite duro</strong> en dólares: al superar el blando recibes un aviso; al superar el duro, las ejecuciones se pausan.</li>
+        <li><strong>Webhook de alertas</strong>: una dirección a la que se envían avisos. El botón <strong>Probar</strong> comprueba que funciona.</li>
+        <li><strong>Coste por modelo/tipo</strong> y un gráfico de <strong>los últimos 30 días</strong>.</li>
+      </ul>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="asistente">
+      <h2>12. Hablar con el asistente del proyecto</h2>
+      <p>En la pestaña <strong>Asistente</strong> tienes un ayudante que conoce tu proyecto.</p>
+      <ul>
+        <li><strong>Preguntar</strong>: escribe y pulsa <strong>Enviar</strong>.</li>
+        <li><strong>Propuestas</strong>: escribe “propón funcionalidades” o “propón contratos”; las propuestas aparecen en <strong>Propuestas pendientes</strong> con <strong>Aceptar</strong> / <strong>Rechazar</strong>.</li>
+        <li><strong>Resumen de ausencia</strong>: para saber qué ocurrió mientras no mirabas.</li>
+        <li><strong>Imágenes</strong>: puede generar bocetos según el modelo elegido.</li>
+
+      <figure class="shot"><img src="manual/14-asistente.jpg" alt="Asistente del proyecto: chat y propuestas." loading="lazy" /><figcaption>Asistente del proyecto: chat y propuestas.</figcaption></figure>
+      </ul>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="recorrido">
+      <h2>13. Recorrido completo de ejemplo</h2>
+      <p>Juntemos todo: construir <strong>un juego de plataformas sencillo</strong>.</p>
+      <ol>
+        <li><strong>Proveedores y modelos</strong> → añade un proveedor (nombre + API key) y un modelo con <code>code</code> y <code>reasoning</code> (y uno con <code>embeddings</code> si subirás documentos).</li>
+        <li><strong>Flujos de trabajo</strong> → <strong>Usar plantilla</strong> en “Bucle de revisión estricta”.</li>
+        <li><strong>Subagentes</strong> → <strong>Cargar plantillas</strong> y, si quieres, asigna el <strong>documentador</strong> a un paso de documentación.</li>
+        <li><strong>Proyectos</strong> → <strong>+ Nuevo proyecto</strong> (nombre, nombre del programa, objetivo, flujo).</li>
+        <li>Completa <strong>Funcionalidades</strong>, <strong>Contratos</strong> y <strong>Documentación</strong> (sube un PDF con tus ideas).</li>
+        <li>Observa el <strong>diagrama</strong> en la pestaña <strong>Flujo</strong> mientras se ejecuta.</li>
+        <li><strong>Ejecuciones</strong> → sigue la <strong>Observabilidad en vivo</strong> y consulta <strong>Ver trazas</strong>.</li>
+        <li><strong>Archivos</strong> → comprueba el código generado.</li>
+        <li><strong>Asistente</strong> → pídele propuestas y acéptalas.</li>
+        <li>Cuando <strong>todos los contratos</strong> estén cumplidos, el proyecto pasa a <code>completed</code>.</li>
+      </ol>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="faq">
+      <h2>14. Preguntas frecuentes</h2>
+      <h4>¿Necesito saber programar?</h4>
+      <p>No. Tú describes lo que quieres y eliges el orden de las tareas.</p>
+      <h4>¿Qué pasa si cierro el navegador durante un desarrollo?</h4>
+      <p>Nada: sigue funcionando solo. Al volver verás en <strong>Ejecuciones</strong> todo lo ocurrido, y un <strong>Resumen de ausencia</strong>.</p>
+      <h4>¿Cuánto cuesta?</h4>
+      <p>Depende de los modelos que uses. En <strong>General → Presupuesto y coste</strong> ves el consumo y puedes fijar un límite.</p>
+      <h4>¿Por qué el proyecto no se marca como “completado”?</h4>
+      <p>Porque falta cumplir algún <strong>contrato</strong> (aparecen como <code>pending</code>).</p>
+      <h4>¿Puedo cambiar el flujo de un proyecto?</h4>
+      <p>Sí: en <strong>General</strong> cambia el <strong>Flujo de trabajo</strong>; también puedes editar el flujo desde la pestaña <strong>Flujo</strong>.</p>
+      <h4>Se ha quedado un paso “fallido”, ¿qué hago?</h4>
+      <p>En <strong>Ejecuciones</strong>, pulsa <strong>↻ Reejecutar desde «paso»</strong> o <strong>Reanudar</strong> si está en pausa. Mira <strong>Ver trazas</strong> para entender qué pasó.</p>
+      <h4>¿Dónde está el código que se genera?</h4>
+      <p>En la pestaña <strong>Archivos</strong>. Los ficheros viven en la carpeta de trabajo del proyecto en el servidor.</p>
+      <h4>¿Cómo borro un proyecto o un flujo?</h4>
+      <p>En las listas de <strong>Proyectos</strong> o <strong>Flujos de trabajo</strong>, usa el botón <strong>Borrar</strong>.</p>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+    <section id="glosario">
+      <h2>15. Glosario</h2>
+      <dl>
+        <p><strong>Agente / Ayudante de IA:</strong> programa automático que hace tareas usando inteligencia artificial.</p>
+        <p><strong>Proveedor:</strong> empresa o servicio que presta la IA (Anthropic, OpenAI, NaN…).</p>
+        <p><strong>Modelo:</strong> la versión concreta del ayudante (Claude Sonnet, DeepSeek…).</p>
+        <p><strong>API key:</strong> la “llave” secreta para usar un proveedor.</p>
+        <p><strong>Proyecto:</strong> el programa que quieres construir.</p>
+        <p><strong>Flujo de trabajo:</strong> el plano con el orden de las tareas.</p>
+        <p><strong>Tarea (paso / nodo):</strong> una casilla del flujo que hace un trabajo.</p>
+        <p><strong>Subagente:</strong> ayudante especializado (revisor, documentador, escritor de tests…).</p>
+        <p><strong>Contrato:</strong> criterio de aceptación que debe cumplirse para terminar el proyecto.</p>
+        <p><strong>Objetivo:</strong> la finalidad del proyecto, en tus palabras.</p>
+        <p><strong>Stack:</strong> conjunto de tecnologías con las que se construye el programa.</p>
+        <p><strong>Ejecución (run):</strong> una “puesta en marcha” del flujo sobre el proyecto.</p>
+        <p><strong>Aprobación:</strong> paso que espera tu permiso para continuar.</p>
+        <p><strong>Bucle de revisión:</strong> repetir un paso (o volver atrás) hasta que quede bien.</p>
+        <p><strong>RAG:</strong> búsqueda inteligente dentro de tus documentos.</p>
+        <p><strong>Embeddings / Rerank:</strong> modelos que permiten esa búsqueda inteligente.</p>
+        <p><strong>Token:</strong> unidad de uso de la IA; determina el coste.</p>
+        <p><strong>Presupuesto (límite blando/duro):</strong> aviso al acercarte y pausa al superar el gasto.</p>
+        <p><strong>Webhook:</strong> dirección a la que se envían avisos automáticos.</p>
+        <p><strong>Traza:</strong> registro detallado de lo que hizo cada paso (tiempo, tokens, coste).</p>
+        <p><strong>OTLP:</strong> formato estándar para llevar trazas a otras herramientas.</p>
+        <p><strong>Workspace:</strong> la carpeta del servidor donde se guardan los archivos del programa.</p>
+        <p><strong>draft / completed / paused / failed:</strong> estados del proyecto (borrador, completado, en pausa, fallido).</p>
+      </dl>
+      <p class="totop"><a href="#que-es">↑ Volver arriba</a></p>
+    </section>
+
+  </main>
+
+  <footer>
+    Manual de usuario — Factoría de Agentes · Documento autocontenido (se puede abrir en el navegador o imprimir a PDF con Ctrl/⌘ + P).
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+FROM node:24-slim
+
+# Imagen base para los contenedores de desarrollo de cada proyecto.
+# Incluye toolchain habitual + git + opencode. Ampliable por proyecto.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates curl openssh-client build-essential python3 \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g pnpm@12.11.2 && npm install -g opencode-ai || true
+
+# Usuario sin privilegios: el agente corre sin root (aislamiento fuerte).
+RUN useradd -m -s /bin/bash dev && mkdir -p /workspace && chown -R dev:dev /workspace
+
+WORKDIR /workspace
+USER dev
+
+CMD ["sleep", "infinity"]
