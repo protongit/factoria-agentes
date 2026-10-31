@@ -45,6 +45,7 @@ import type { Harness, StepStatus } from "@factoria/shared";
 import { resolveExecutor } from "@factoria/executors";
 import { asc, eq } from "drizzle-orm";
 import { publishRunEvent } from "./events.ts";
+import { postRunBriefing } from "./briefings.ts";
 import { enqueueRun, type RunJobData } from "./queues.ts";
 import { ensureOpencodeServer } from "./opencode-runtime.ts";
 import { ensureProjectContainer } from "./container-manager.ts";
@@ -369,7 +370,12 @@ export async function processRun(job: RunJobData): Promise<void> {
     if (!stepRunId) return;
     await db
       .update(stepRuns)
-      .set({ status: st, verdict: verdict as unknown as Record<string, unknown>, finishedAt: new Date() })
+      .set({
+        status: st,
+        verdict: verdict as unknown as Record<string, unknown>,
+        error: st === "failed" ? verdict.reasons.join("; ").slice(0, 4000) : null,
+        finishedAt: new Date(),
+      })
       .where(eq(stepRuns.id, stepRunId));
   };
 
@@ -440,6 +446,15 @@ export async function processRun(job: RunJobData): Promise<void> {
       await db.update(workflowRuns).set({ status: "paused", currentNodes: [node.key] }).where(eq(workflowRuns.id, runId));
       await emit(stepRunId, "orchestrator", `Paso «${node.name}» espera aprobación humana`, "warn", { nodeKey: node.key });
       status.set(node.key, "waiting_approval");
+      await postRunBriefing({
+        projectId,
+        projectName: project.name,
+        runId,
+        kind: "approval",
+        dedupeKey: `approval:${stepRunId}`,
+        nodeName: node.name,
+        nodeKey: node.key,
+      });
       return "pause";
     }
 
@@ -767,6 +782,12 @@ export async function processRun(job: RunJobData): Promise<void> {
       releaseSlot(slotKey);
     }
 
+    // Si el paso falla, corta también la sesión del agente: de lo contrario
+    // el stream sigue emitiendo eventos para un paso ya finalizado.
+    if (result.status === "failed") {
+      await handle.abort().catch(() => {});
+    }
+
     if (stepSpanId) {
       await db
         .update(traceSpans)
@@ -971,6 +992,24 @@ export async function processRun(job: RunJobData): Promise<void> {
       .where(eq(projects.id, projectId));
   }
   await emit(null, "orchestrator", isTest ? "Run de prueba finalizado" : `Run finalizado: ${runStatus}. Contratos: ${allContractsOk ? "todos satisfechos" : "pendientes"}`, anyFailed ? "warn" : "info");
+  if (!isTest) {
+    const failedKeys = [...status.entries()].filter(([, s]) => s === "failed").map(([k]) => k);
+    const reason = failedKeys
+      .flatMap((k) => verdicts.get(k)?.reasons ?? [])
+      .join("; ")
+      .slice(0, 1500);
+    await postRunBriefing({
+      projectId,
+      projectName: project.name,
+      runId,
+      kind: runStatus === "failed" ? "failed" : "succeeded",
+      dedupeKey: `run:${runId}:${runStatus}`,
+      nodeKey: failedKeys[0],
+      nodeName: failedKeys[0] ? graph.nodes.find((n) => n.key === failedKeys[0])?.name : undefined,
+      reason: reason || null,
+      contractsOk: allContractsOk,
+    });
+  }
   if (rootSpanId) await db.update(traceSpans).set({ endedAt: new Date() }).where(eq(traceSpans.id, rootSpanId));
   active.delete(runId);
 }

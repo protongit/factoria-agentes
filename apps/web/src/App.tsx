@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { ConfirmProvider, ToastProvider, useToast } from "./components/ui.tsx";
+import { Notifications } from "./components/Notifications.tsx";
 import { api } from "./lib/api.ts";
 import { I18nProvider, useI18n } from "./lib/i18n.tsx";
 import { Login } from "./pages/Login.tsx";
@@ -58,6 +59,7 @@ function Layout() {
           ))}
         </nav>
         <div style={{ flex: 1 }} />
+        <Notifications />
         <div className="sidebar-foot">
           <button className="ghost small" onClick={() => setLang(lang === "es" ? "en" : "es")} title="Idioma / Language">
             {lang === "es" ? "ES" : "EN"} · {lang === "es" ? "English" : "Español"}

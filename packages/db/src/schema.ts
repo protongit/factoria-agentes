@@ -399,8 +399,10 @@ export const assistantMessages = pgTable("assistant_messages", {
   role: text("role").$type<"user" | "assistant">().notNull(),
   content: text("content").notNull(),
   attachments: jsonb("attachments").$type<Record<string, unknown>[]>().notNull().default([]),
+  runId: uuid("run_id").references(() => workflowRuns.id, { onDelete: "set null" }),
+  dedupeKey: text("dedupe_key"),
   createdAt: createdAt(),
-});
+}, (t) => [uniqueIndex("assistant_messages_dedupe_idx").on(t.dedupeKey)]);
 
 export const assistantProposals = pgTable("assistant_proposals", {
   id: id(),

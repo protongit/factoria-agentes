@@ -51,7 +51,13 @@ Los contratos se **re-verifican siempre** al pasar por `contract_check` y al cer
 
 ## Notificaciones
 
-- Eventos de interés (fin de run, fallo, aprobación pendiente, alerta de presupuesto) notificables por canal (UI, email, webhook) — extensible.
+Avisos proactivos al usuario, independientes de que esté mirando la ejecución:
+
+- **Fuente**: `GET /api/notifications` agrega, para los proyectos del usuario autenticado, las ejecuciones de los últimos 7 días que están **fallidas**, **terminadas**, **canceladas** o **esperando aprobación humana**. Incluye paso, motivo real (error del paso o último evento `error`) y pasos siguientes.
+- **UI**: campana en el menú lateral (panel con histórico y "marcar leídas"), aviso efímero (toast) y recuadro destacado en la ejecución con el motivo y el botón de replay.
+- **Navegador**: `Notification` API con permiso explícito del usuario; el clic en la notificación abre la ejecución correspondiente (`/projects/:id?tab=runs&run=:runId`).
+- **Asistente**: el worker inserta un mensaje en `assistant_messages` (con `run_id` y `dedupe_key` para no duplicar) al pausar por aprobación y al terminar el run. El mensaje explica la situación y los pasos siguientes.
+- **Sesión del agente**: si un paso falla, se aborta la sesión del ejecutor para que no siga emitiendo eventos sobre un paso ya finalizado.
 
 ## Protocolo de pruebas de usabilidad (desarrollo)
 

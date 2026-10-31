@@ -20,3 +20,4 @@ export * from "./governance.ts";
 export * from "./adr.ts";
 export * from "./containers.ts";
 export * from "./docker.ts";
+export * from "./run-alerts.ts";

@@ -16,6 +16,7 @@ Plataforma web multiusuario para **orquestar agentes de IA que desarrollan softw
 - **Proyectos** con funcionalidades, contratos (gate de finalización), documentación de referencia y generada, y asignación de flujo.
 - **Ejecución** orquestada por un scheduler durable (BullMQ): paralelismo, joins, bucles con `loopGuard` y aislamiento de escrituras por directorio de trabajo.
 - **Observabilidad en vivo**: eventos SSE con `seq` (catch-up sin huecos), trazas estructuradas y token counter por ejecución.
+- **Avisos proactivos**: notificaciones en la UI y en el navegador (validación pendiente, fallo con motivo y pasos siguientes, fin de ejecución) y mensaje del asistente por cada aviso.
 - **Asistente del proyecto**: chat, propuestas de definición con aprobación, generación de imágenes (bocetos) y resumen de ausencia.
 - **RAG y memoria**: contexto del proyecto, búsqueda sobre la documentación y memoria de largo plazo.
 - **Método y gates** (porte nativo de Karajan v4): review gate cross-AI atado al hash del diff, hooks de git deterministas, Sentinel (card-first, rag-first, bash-write, discard, governance…), verificación de *claims* anti-alucinación, Steward de garantías que caducan y ledger de gobernanza encadenado por hash.

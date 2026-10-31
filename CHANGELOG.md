@@ -8,6 +8,17 @@ y el versionado [SemVer](https://semver.org/lang/es/).
 
 ### Añadido
 
+- Avisos proactivos de ejecución: campana de notificaciones en la UI, notificaciones del navegador (con permiso) y mensaje del asistente con la situación y los pasos siguientes para aprobaciones pendientes, fallos, ejecuciones terminadas y canceladas.
+- Motivo real del fallo en la ejecución y en el listado de avisos, con botón de replay desde el paso fallido.
+- Enlaces profundos a la ejecución afectada (`?tab=runs&run=…`) desde las notificaciones.
+
+### Corregido
+
+- La sesión del agente se aborta al fallar un paso, evitando que siga emitiendo eventos sobre una ejecución ya finalizada.
+- El motivo del fallo se persiste en el paso (`step_runs.error`), no solo en el stream de eventos.
+
+### Añadido (documentación)
+
 - Documentación de proyecto: licencia MIT, guía de contribución, código de
   conducta, política de seguridad y plantillas de issues/PR.
 

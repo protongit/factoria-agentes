@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { EmptyState, SkeletonRows, Spinner, StatusBadge, useConfirm, useToast } from "../components/ui.tsx";
 import { FlowDiagram } from "../components/FlowDiagram.tsx";
 import { api, type RunEvent, type TraceSpan } from "../lib/api.ts";
@@ -15,7 +15,19 @@ export function ProjectDetail() {
   const workflows = useQuery({ queryKey: ["workflows"], queryFn: api.workflows });
   const models = useQuery({ queryKey: ["models"], queryFn: api.models });
   const runs = useQuery({ queryKey: ["runs", id], queryFn: () => api.runs(id), refetchInterval: 3000 });
-  const [tab, setTab] = useState<Tab>("general");
+  const [params, setParams] = useSearchParams();
+  const validTabs: Tab[] = ["general", "features", "contracts", "documents", "flow", "files", "environment", "method", "runs", "assistant"];
+  const tabFromUrl = params.get("tab") as Tab | null;
+  const [tab, setTabState] = useState<Tab>(tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "general");
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const next = new URLSearchParams(params);
+    next.set("tab", t);
+    setParams(next, { replace: true });
+  };
+  useEffect(() => {
+    if (tabFromUrl && validTabs.includes(tabFromUrl)) setTabState(tabFromUrl);
+  }, [tabFromUrl]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["project", id] });
 
@@ -81,7 +93,7 @@ export function ProjectDetail() {
       {tab === "files" && <WorkspaceFiles id={id} />}
       {tab === "environment" && <Environment id={id} project={p} />}
       {tab === "method" && <Method id={id} />}
-      {tab === "runs" && <Runs id={id} runs={runs} />}
+      {tab === "runs" && <Runs id={id} runs={runs} initialRunId={params.get("run") ?? undefined} />}
       {tab === "assistant" && <Assistant id={id} onChange={invalidate} />}
     </>
   );
@@ -899,8 +911,9 @@ function Flow({ projectId, projectWorkflowId, workflows, runs }: { projectId: st
   );
 }
 
-function Runs({ id, runs }: { id: string; runs: any }) {
-  const [selectedRun, setSelectedRun] = useState<string | null>(null);
+function Runs({ id, runs, initialRunId }: { id: string; runs: any; initialRunId?: string }) {
+  const [selectedRun, setSelectedRun] = useState<string | null>(initialRunId ?? null);
+  useEffect(() => { if (initialRunId) setSelectedRun(initialRunId); }, [initialRunId]);
   useEffect(() => { if (!selectedRun && runs.data?.length) setSelectedRun(runs.data[0]!.id); }, [runs.data, selectedRun]);
 
   return (
@@ -930,7 +943,7 @@ function Runs({ id, runs }: { id: string; runs: any }) {
           <EmptyState icon="▶" title="Sin ejecuciones" hint="Pulsa «Lanzar ejecución» en la cabecera para arrancar el flujo asignado." />
         )}
       </div>
-      <div style={{ minWidth: 0 }}>{selectedRun && <RunStream runId={selectedRun} />}</div>
+      <div style={{ minWidth: 0 }}>{selectedRun && <RunStream runId={selectedRun} projectId={id} />}</div>
     </div>
   );
 }
@@ -977,7 +990,7 @@ function EventLine({ event }: { event: RunEvent }) {
   );
 }
 
-function RunStream({ runId }: { runId: string }) {
+function RunStream({ runId, projectId }: { runId: string; projectId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [events, setEvents] = useState<RunEvent[]>([]);
@@ -1019,6 +1032,16 @@ function RunStream({ runId }: { runId: string }) {
 
   const status = run.data?.status ?? "";
   const pending = (run.data?.steps ?? []).filter((s) => s.status === "waiting_approval");
+  const failedSteps = (run.data?.steps ?? []).filter((s) => s.status === "failed");
+  const failedStep = failedSteps[failedSteps.length - 1];
+  const lastErrorEvent = [...events].reverse().find((e) => e.level === "error")?.message;
+  const failureReason = failedStep?.error || lastErrorEvent || "Consulta los eventos para ver el detalle.";
+
+  useEffect(() => {
+    if (["failed", "succeeded", "cancelled"].includes(status)) {
+      qc.invalidateQueries({ queryKey: ["assistant"] });
+    }
+  }, [status, qc]);
 
   return (
     <div className="panel">
@@ -1030,13 +1053,38 @@ function RunStream({ runId }: { runId: string }) {
         </div>
       </div>
 
-      {pending.length === 0 && (run.data?.steps ?? []).filter((s) => s.status === "failed").length > 0 && (
-        <div className="row" style={{ marginTop: "0.6rem" }}>
-          {(run.data?.steps ?? []).filter((s) => s.status === "failed").map((s) => (
-            <button key={s.id} className="ghost small" onClick={() => api.replayRun(runId, s.nodeKey).then(() => toast("Replay lanzado", "ok")).catch((e: Error) => toast(e.message, "err"))}>
-              ↻ Reejecutar desde «{s.nodeKey}»
-            </button>
-          ))}
+      {status === "failed" && (
+        <div className="error-box" style={{ marginTop: "0.6rem" }}>
+          <strong>La ejecución falló{failedStep ? ` en «${failedStep.nodeKey}»` : ""}.</strong>
+          <p style={{ margin: "0.35rem 0" }}>{failureReason}</p>
+          <strong style={{ fontSize: "0.88rem" }}>Pasos siguientes</strong>
+          <ol style={{ margin: "0.25rem 0 0.5rem 1.2rem", padding: 0 }}>
+            <li>Revisa el motivo completo en los eventos de la ejecución.</li>
+            {failedStep && <li>Corrige lo necesario y pulsa «Reejecutar desde «{failedStep.nodeKey}»».</li>}
+            <li>Si el error es de red o del proveedor, prueba la conexión en «Proveedores y modelos» y vuelve a intentarlo.</li>
+          </ol>
+          <div className="row" style={{ gap: "0.4rem" }}>
+            {failedStep && (
+              <button
+                className="small"
+                onClick={() => api.replayRun(runId, failedStep.nodeKey).then(() => toast("Replay lanzado", "ok")).catch((e: Error) => toast(e.message, "err"))}
+              >
+                ↻ Reejecutar desde «{failedStep.nodeKey}»
+              </button>
+            )}
+            <Link className="ghost small button-like" to={`/projects/${projectId}?tab=assistant`}>
+              Ver explicación del asistente
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {pending.length > 0 && (
+        <div className="warn-box" style={{ marginTop: "0.6rem" }}>
+          <strong>⏸ El flujo está esperando tu validación.</strong>
+          <p className="muted" style={{ margin: "0.25rem 0 0" }}>
+            Aprueba o rechaza el paso para continuar; el aviso también se envía al navegador.
+          </p>
         </div>
       )}
 

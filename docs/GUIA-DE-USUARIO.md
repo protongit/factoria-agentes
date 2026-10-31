@@ -289,7 +289,25 @@ Estados que verás: `queued` (en cola), `running` (en marcha), `paused` (en paus
 
 ### 8.3 Si un paso falla
 
-Si un paso falla y el flujo está preparado para volver atrás (bucle de corrección), **se repetirá automáticamente** dándole al ayudante las indicaciones de qué corregir. Si no, verás un botón **↻ Reejecutar desde «paso»**: vuelve a empezar desde ese paso concreto, sin repetir lo que ya estaba bien.
+Si un paso falla y el flujo está preparado para volver atrás (bucle de corrección), **se repetirá automáticamente** dándole al ayudante las indicaciones de qué corregir. Si no, la ejecución se detiene y verás:
+
+- Un recuadro **«La ejecución falló en «paso»»** con el **motivo real** (por ejemplo, un error de red o del proveedor del modelo).
+- La lista de **pasos siguientes** propuestos por el asistente.
+- El botón **↻ Reejecutar desde «paso»**: vuelve a empezar desde ese paso concreto, sin repetir lo que ya estaba bien.
+- El enlace **Ver explicación del asistente**, que abre la pestaña **Asistente** con el detalle y los pasos siguientes.
+
+El motivo también queda escrito en la pestaña **Asistente** y en el aviso del navegador, para que no tengas que bucear en los eventos.
+
+### 8.4 Avisos y notificaciones
+
+La campana **🔔 Notificaciones** (al pie del menú lateral) reúne los avisos de tus proyectos:
+
+- **Validación pendiente**: un flujo espera que apruebes o rechaces un paso.
+- **La ejecución ha fallado**: con el paso y el motivo del fallo.
+- **La ejecución ha terminado**: correctamente o con contratos pendientes.
+- **La ejecución se ha cancelado**.
+
+Cada aviso incluye **pasos siguientes** y, al pulsarlo, te lleva directamente a la ejecución afectada. Para recibir también **notificaciones del navegador** (aunque estés en otra pestaña), pulsa **Activar notificaciones del navegador** dentro del panel y acepta el permiso. El asistente del proyecto deja además un mensaje con la situación y los pasos siguientes.
 
 ---
 

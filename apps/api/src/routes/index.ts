@@ -4,6 +4,7 @@ import { fileRoutes } from "./files.ts";
 import { healthRoutes } from "./health.ts";
 import { methodRoutes } from "./method.ts";
 import { modelRoutes } from "./models.ts";
+import { notificationRoutes } from "./notifications.ts";
 import { projectRoutes } from "./projects.ts";
 import { providerRoutes } from "./providers.ts";
 import { runRoutes } from "./runs.ts";
@@ -21,4 +22,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(methodRoutes);
   await app.register(fileRoutes);
   await app.register(runRoutes);
+  await app.register(notificationRoutes);
 }

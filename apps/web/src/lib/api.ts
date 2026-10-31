@@ -55,9 +55,24 @@ export interface Project {
 export interface ProjectFull extends Project {
   features: Feature[]; contracts: Contract[]; documents: ProjectDocument[];
 }
-export interface StepRun { id: string; nodeKey: string; iteration: number; status: string; startedAt?: string | null; finishedAt?: string | null }
+export interface StepRun { id: string; nodeKey: string; iteration: number; status: string; error?: string | null; startedAt?: string | null; finishedAt?: string | null }
 export interface Run { id: string; projectId: string; status: string; currentNodes: string[]; createdAt: string }
 export interface RunFull extends Run { steps: StepRun[] }
+export type RunAlertKind = "approval" | "failed" | "succeeded" | "cancelled";
+export interface NotificationAlert {
+  id: string;
+  kind: RunAlertKind;
+  runId: string;
+  projectId: string;
+  projectName: string;
+  nodeKey?: string;
+  nodeName?: string;
+  message: string;
+  error?: string;
+  createdAt: string;
+  nextSteps: string[];
+  href: string;
+}
 export interface RunEvent {
   id: string; seq: number; level: string; source: string; message: string; stepRunId?: string | null;
   payload?: Record<string, unknown> | null; createdAt: string;
@@ -126,6 +141,7 @@ export const api = {
   runUsage: (runId: string) => get<{ totals: { inputTokens: number; outputTokens: number; cost: number }; count: number }>(`/api/runs/${runId}/usage`),
   runTraces: (runId: string) => get<TraceSpan[]>(`/api/runs/${runId}/traces`),
   runSummary: (runId: string) => get<{ summary: string }[]>(`/api/runs/${runId}/summary`),
+  notifications: () => get<{ alerts: NotificationAlert[] }>("/api/notifications"),
   pauseRun: (runId: string) => post<{ ok: boolean }>(`/api/runs/${runId}/pause`),
   resumeRun: (runId: string) => post<{ ok: boolean }>(`/api/runs/${runId}/resume`),
   cancelRun: (runId: string) => post<{ ok: boolean }>(`/api/runs/${runId}/cancel`),
