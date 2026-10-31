@@ -14,6 +14,7 @@ tocar código; si solo quieres usar la aplicación, ve a la
 | [SPEC.md](./SPEC.md) | Especificación funcional: qué hace y para quién. |
 | [FLOWS.md](./FLOWS.md) | Flujos de trabajo y plantillas de Karajan. |
 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | Fases, estado y desviaciones conocidas. |
+| [INCIDENT-FETCH-FAILED.md](./INCIDENT-FETCH-FAILED.md) | Informe del incidente `fetch failed` en ejecuciones largas (causa y corrección). |
 
 ## Diseño técnico
 

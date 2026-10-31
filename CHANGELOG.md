@@ -14,8 +14,18 @@ y el versionado [SemVer](https://semver.org/lang/es/).
 
 ### Corregido
 
+- El error `fetch failed` de las ejecuciones largas: el cliente HTTP abortaba a los 300 s la llamada bloqueante `session.prompt`. Ahora se usa `promptAsync` y se espera el evento `session.idle`.
+- Las solicitudes de permiso (`external_directory`, etc.) se responden automáticamente según el harness; antes podían dejar el turno colgado. `external_directory` y `doom_loop` se deniegan por defecto y el rechazo queda registrado como evento.
 - La sesión del agente se aborta al fallar un paso, evitando que siga emitiendo eventos sobre una ejecución ya finalizada.
 - El motivo del fallo se persiste en el paso (`step_runs.error`), no solo en el stream de eventos.
+- Las tools `project-info_*` recibían el nombre de la carpeta del workspace en vez del UUID del proyecto y fallaban; ahora el prompt incluye el `project_id` correcto.
+
+### Añadido
+
+- Timeout explícito por paso (`AGENT_STEP_TIMEOUT`, 30 min por defecto) con aborto y mensaje legible.
+- Fecha y hora en cada línea de observabilidad.
+- Contexto de ejecuciones y log reciente para el asistente del proyecto.
+- Tool MCP `get_run_log` para consultar la secuencia de eventos y errores de una ejecución.
 
 ### Añadido (documentación)
 

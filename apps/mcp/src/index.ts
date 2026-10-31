@@ -1,5 +1,5 @@
-import { contracts, db, documents, longTermMemory, projectFeatures, projects, workflowRuns } from "@factoria/db";
-import { asc, desc, eq } from "drizzle-orm";
+import { contracts, db, documents, longTermMemory, projectFeatures, projects, runEvents, workflowRuns } from "@factoria/db";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { createInterface } from "node:readline";
 
 /**
@@ -26,6 +26,7 @@ const TOOLS = [
   { name: "list_contracts", description: "Contratos y su estado.", inputSchema: { type: "object", properties: { project_id: { type: "string" } }, required: ["project_id"] } },
   { name: "list_documents", description: "Documentos del proyecto.", inputSchema: { type: "object", properties: { project_id: { type: "string" } }, required: ["project_id"] } },
   { name: "list_runs", description: "Ejecuciones del proyecto.", inputSchema: { type: "object", properties: { project_id: { type: "string" } }, required: ["project_id"] } },
+  { name: "get_run_log", description: "Log de eventos y errores de la última ejecución (o de una ejecución concreta).", inputSchema: { type: "object", properties: { project_id: { type: "string" }, run_id: { type: "string" }, limit: { type: "number" } }, required: ["project_id"] } },
   { name: "search_project_docs", description: "Búsqueda sobre la documentación del proyecto.", inputSchema: { type: "object", properties: { project_id: { type: "string" }, query: { type: "string" } }, required: ["project_id", "query"] } },
   { name: "search_memory", description: "Recupera memoria de largo plazo.", inputSchema: { type: "object", properties: { project_id: { type: "string" }, query: { type: "string" } }, required: ["project_id"] } },
 ];
@@ -46,6 +47,33 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       return db.select().from(documents).where(eq(documents.projectId, projectId)).orderBy(desc(documents.createdAt));
     case "list_runs":
       return db.select().from(workflowRuns).where(eq(workflowRuns.projectId, projectId)).orderBy(desc(workflowRuns.createdAt));
+    case "get_run_log": {
+      const runId = args.run_id ? String(args.run_id) : undefined;
+      const [run] = runId
+        ? await db
+            .select()
+            .from(workflowRuns)
+            .where(and(eq(workflowRuns.id, runId), eq(workflowRuns.projectId, projectId)))
+            .limit(1)
+        : await db
+            .select()
+            .from(workflowRuns)
+            .where(eq(workflowRuns.projectId, projectId))
+            .orderBy(desc(workflowRuns.createdAt))
+            .limit(1);
+      if (!run) return { run: null, events: [] };
+      const limit = Math.min(200, Math.max(1, Number(args.limit ?? 60)));
+      const events = await db
+        .select({ seq: runEvents.seq, level: runEvents.level, source: runEvents.source, message: runEvents.message, createdAt: runEvents.createdAt })
+        .from(runEvents)
+        .where(eq(runEvents.runId, run.id))
+        .orderBy(desc(runEvents.seq))
+        .limit(limit);
+      return {
+        run: { id: run.id, status: run.status, startedAt: run.startedAt, finishedAt: run.finishedAt },
+        events: events.reverse(),
+      };
+    }
     case "search_project_docs": {
       const q = String(args.query ?? "").toLowerCase();
       const docs = await db.select().from(documents).where(eq(documents.projectId, projectId));

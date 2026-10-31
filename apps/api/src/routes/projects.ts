@@ -14,6 +14,7 @@ import {
   providers,
   runEvents,
   runSummaries,
+  stepRuns,
   usageRecords,
   workflowRuns,
 } from "@factoria/db";
@@ -663,21 +664,21 @@ export async function projectRoutes(app: FastifyInstance): Promise<void> {
         `Contratos: ${projectContracts.map((c) => c.title).join(", ") || "ninguno"}`,
         `Documentos: ${docs.map((d) => d.title).join(", ") || "ninguno"}`,
         `Memoria: ${mem.map((m) => m.content).slice(-5).join(" | ") || "vacía"}`,
-        `Ejecuciones: ${runs.length}`,
+        await runLogContext(id),
       ].join("\n");
       try {
         replyText = await chat({
           provider: ep.provider,
           modelId: ep.modelId,
-          system: `${project.assistantInstructions ?? "Eres el asistente del proyecto."} Ayudas al usuario, das la visión general y propones mejoras. Responde en español, breve y concreto.`,
+          system: `${project.assistantInstructions ?? "Eres el asistente del proyecto."} Ayudas al usuario, das la visión general y propones mejoras. Responde en español, breve y concreto. Tienes acceso al estado de las ejecuciones y a los eventos recientes (log) incluidos en el contexto: cuando te pregunten por un fallo, cita el paso, el motivo exacto y la hora; no inventes datos que no aparezcan en el contexto.`,
           prompt: `Contexto del proyecto:\n${ctx}\n\nPregunta del usuario: ${b.content}`,
         });
       } catch {
-        replyText = fallbackReply(project, runs.length);
+        replyText = fallbackReply(project, runs.length, await runLogContext(id));
       }
     } else {
       const runs = await db.select().from(workflowRuns).where(eq(workflowRuns.projectId, id));
-      replyText = fallbackReply(project, runs.length);
+      replyText = fallbackReply(project, runs.length, await runLogContext(id));
     }
 
     const [assistantRow] = await db
@@ -1125,8 +1126,83 @@ async function proposeContracts(
   }
 }
 
-function fallbackReply(project: { name: string; status: string; objective: string; stack: string[] }, runs: number): string {
-  return `Proyecto «${project.name}» (${project.status}). Objetivo: ${project.objective}. Stack: ${project.stack.join(", ") || "sin definir"}. Ejecuciones: ${runs}. Pídeme «propón funcionalidades» o «propón contratos» para completar la definición.`;
+/**
+ * Estado y log reciente de las ejecuciones del proyecto. Se inyecta en el
+ * contexto del asistente para que pueda explicar fallos con datos reales.
+ */
+async function runLogContext(projectId: string): Promise<string> {
+  const fmt = (value: Date | string | null) =>
+    value
+      ? new Date(value).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "medium" })
+      : "—";
+
+  const runs = await db
+    .select()
+    .from(workflowRuns)
+    .where(eq(workflowRuns.projectId, projectId))
+    .orderBy(desc(workflowRuns.createdAt))
+    .limit(5);
+  if (runs.length === 0) return "Ejecuciones: ninguna.";
+
+  const lines = [`Ejecuciones (últimas ${runs.length}):`];
+  for (const run of runs) {
+    lines.push(`- ${fmt(run.createdAt)} → ${run.status}${run.finishedAt ? ` (fin ${fmt(run.finishedAt)})` : ""}`);
+  }
+
+  const latest = runs[0]!;
+  const inspected = runs.slice(0, 3);
+  const stepsByRun = await Promise.all(
+    inspected.map((run) => db.select().from(stepRuns).where(eq(stepRuns.runId, run.id)).orderBy(asc(stepRuns.startedAt))),
+  );
+  const failures = inspected.flatMap((run, index) =>
+    stepsByRun[index]!
+      .filter((step) => step.status === "failed")
+      .map((step) => ({ run, step })),
+  );
+  if (failures.length > 0) {
+    lines.push("", "Pasos fallidos de las últimas ejecuciones:");
+    for (const { run, step } of failures) {
+      let reason = step.error ?? "";
+      if (!reason) {
+        const [lastError] = await db
+          .select({ message: runEvents.message })
+          .from(runEvents)
+          .where(and(eq(runEvents.runId, run.id), eq(runEvents.level, "error")))
+          .orderBy(desc(runEvents.seq))
+          .limit(1);
+        reason = lastError?.message ?? "sin detalle";
+      }
+      lines.push(`- ${fmt(run.createdAt)} (${run.status}) «${step.nodeKey}»: ${reason.slice(0, 600)}`);
+    }
+    if (failures.some(({ step }) => /fetch failed/i.test(step.error ?? ""))) {
+      lines.push(
+        "",
+        "Nota de diagnóstico: «fetch failed» es un error de red del cliente HTTP. En turnos largos suele deberse a un timeout del cliente o a una petición bloqueada, no necesariamente a una caída del proveedor; confirma la causa con el log del worker antes de afirmarlo.",
+      );
+    }
+  }
+
+  // Secuencia de la ejecución más reciente que falló (o la última si no hubo fallos).
+  const logRun = runs.find((run) => run.status === "failed") ?? latest;
+  const events = await db.select().from(runEvents).where(eq(runEvents.runId, logRun.id)).orderBy(asc(runEvents.seq));
+  const notable = events
+    .filter((event) => {
+      const kind = (event.payload as { kind?: string } | null)?.kind;
+      if (event.level === "error" || event.level === "warn" || event.source === "orchestrator") return true;
+      return kind === "text" && event.message.trim().length > 0;
+    })
+    .slice(-40);
+  if (notable.length > 0) {
+    lines.push("", `Secuencia de la última ejecución${logRun.status === "failed" ? " fallida" : ""} (${fmt(logRun.createdAt)}):`);
+    for (const event of notable) {
+      lines.push(`[${fmt(event.createdAt)}] ${event.level}/${event.source}: ${event.message.replace(/\s+/g, " ").slice(0, 320)}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function fallbackReply(project: { name: string; status: string; objective: string; stack: string[] }, runs: number, runLog?: string): string {
+  return `Proyecto «${project.name}» (${project.status}). Objetivo: ${project.objective}. Stack: ${project.stack.join(", ") || "sin definir"}. Ejecuciones: ${runs}.${runLog ? `\n\n${runLog}` : ""} Pídeme «propón funcionalidades» o «propón contratos» para completar la definición.`;
 }
 
 function suggestFeatures(programName: string, _objective: string, _description: string): string[] {

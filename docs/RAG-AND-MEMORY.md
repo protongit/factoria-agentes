@@ -12,11 +12,9 @@ Servicio interno (`mcp-project`) que expone toda la información del proyecto a 
 | `list_features` | Funcionalidades y su estado. |
 | `list_contracts` | Contratos y su estado. |
 | `list_documents` | Documentos de referencia y generados. |
-| `get_workflow` | Grafo de trabajo. |
-| `list_runs` / `get_run` | Ejecuciones y su estado. |
-| `list_events` | Eventos de un run (con `sinceSeq`). |
-| `get_diff` | Diff de un paso/run. |
-| `search_project_docs` | Búsqueda semántica (RAG) sobre la documentación. |
+| `list_runs` | Ejecuciones del proyecto y su estado. |
+| `get_run_log` | Eventos y errores de la última ejecución (o de `run_id`), con `seq`, nivel, origen y fecha. |
+| `search_project_docs` | Búsqueda sobre la documentación del proyecto. |
 | `search_memory` | Recuperación de memoria de largo plazo. |
 
 Además se distribuye una **skill** de opencode que envuelve las llamadas más frecuentes.

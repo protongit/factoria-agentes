@@ -17,7 +17,18 @@ export interface AgentRunContext {
   /** Instrucciones del subagente asignado al paso (si aplica). */
   subagentInstructions?: string;
   onEvent: (event: AgentEvent) => void | Promise<void>;
+  /** Decide qué hacer ante una solicitud de permiso del agente. */
+  onPermission?: (request: PermissionRequest) => PermissionDecision | Promise<PermissionDecision>;
   signal?: AbortSignal;
+}
+
+export type PermissionDecision = "once" | "always" | "reject";
+
+export interface PermissionRequest {
+  type: string;
+  pattern?: string | string[];
+  title?: string;
+  sessionID: string;
 }
 
 export type AgentEventType =

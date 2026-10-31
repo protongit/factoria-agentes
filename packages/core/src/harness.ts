@@ -8,6 +8,10 @@ export interface PermissionConfig {
   bash: PermissionValue;
   webfetch: PermissionMode;
   task: PermissionValue;
+  /** Acceso a rutas fuera del workspace (opencode lo pide con `external_directory`). */
+  external_directory: PermissionMode;
+  /** Protección contra bucles peligrosos del agente. */
+  doom_loop: PermissionMode;
 }
 
 const DEFAULTS: PermissionConfig = {
@@ -16,6 +20,8 @@ const DEFAULTS: PermissionConfig = {
   bash: "deny",
   webfetch: "deny",
   task: "deny",
+  external_directory: "deny",
+  doom_loop: "deny",
 };
 
 /**
@@ -33,6 +39,25 @@ export function resolvePermissions(
   };
 }
 
+/** Decide si un permiso está permitido según el harness (cadena o mapa de patrones). */
+export function permissionAllows(configured: unknown, pattern?: string | string[]): boolean {
+  if (typeof configured === "string") return configured === "allow";
+  if (!configured || typeof configured !== "object") return false;
+  const map = configured as Record<string, string>;
+  const patterns = Array.isArray(pattern) ? pattern : pattern ? [pattern] : ["*"];
+  const glob = (source: string, text: string) =>
+    new RegExp(`^${source.split("*").map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`).test(text);
+  for (const p of patterns) {
+    for (const [key, value] of Object.entries(map)) {
+      if (key === "*" || key === p || glob(key, p)) {
+        if (value === "allow") return true;
+        if (value === "deny") return false;
+      }
+    }
+  }
+  return false;
+}
+
 /** Materializa los permisos en el formato de agente de opencode. */
 export function toOpenCodePermissions(config: PermissionConfig): Record<string, unknown> {
   return {
@@ -41,6 +66,8 @@ export function toOpenCodePermissions(config: PermissionConfig): Record<string, 
     bash: config.bash,
     webfetch: config.webfetch,
     task: config.task,
+    external_directory: config.external_directory,
+    doom_loop: config.doom_loop,
   };
 }
 

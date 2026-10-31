@@ -34,6 +34,7 @@ import {
   mergeWorktree,
   modelFamily,
   nextAdrNumber,
+  permissionAllows,
   pushWithAuth,
   renderAdr,
   resolvePermissions,
@@ -718,6 +719,7 @@ export async function processRun(job: RunJobData): Promise<void> {
     const prompt = [
       subagent?.instructions ? `# Rol\n${subagent.instructions}\n` : "",
       `# Proyecto\n${project.name} — ${project.objective}`,
+      `ID del proyecto (project_id): ${projectId} — úsalo al llamar a las tools project-info_*`,
       project.stack && project.stack.length ? `Stack: ${project.stack.join(", ")}` : "",
       context ? `# Contexto del proyecto\n${context}` : "",
       `# Tarea: ${node.name}`,
@@ -746,6 +748,18 @@ export async function processRun(job: RunJobData): Promise<void> {
       model: modelRef,
       harness: { executor: harness.executor ?? "opencode", permissions, mcpServers: (harness.mcpServers as string[] | undefined) ?? [], skills: (harness.skills as string[] | undefined) ?? [], gates: (harness.gates as Harness["gates"] | undefined) ?? [], agentProfile: "build" },
       subagentInstructions: subagent?.instructions ?? undefined,
+      onPermission: async (req) => {
+        const allowed = permissionAllows((permissions as unknown as Record<string, unknown>)[req.type], req.pattern);
+        const pattern = Array.isArray(req.pattern) ? req.pattern.join(", ") : req.pattern;
+        await emit(
+          stepRunId,
+          "orchestrator",
+          `Permiso «${req.type}» ${allowed ? "concedido" : "denegado"}${pattern ? ` (${pattern})` : ""}${allowed ? " por el harness" : ": requiere aprobación humana o está fuera del workspace"}`,
+          allowed ? "info" : "warn",
+          { nodeKey: node.key, permission: req.type, pattern },
+        );
+        return allowed ? "once" : "reject";
+      },
       onEvent: async (event) => {
         if (event.type === "text") {
           const text = event.message ?? (typeof event.payload === "string" ? event.payload : "");

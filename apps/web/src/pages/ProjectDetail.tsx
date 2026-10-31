@@ -948,6 +948,16 @@ function Runs({ id, runs, initialRunId }: { id: string; runs: any; initialRunId?
   );
 }
 
+function eventTime(value: string): string {
+  return new Date(value).toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function EventLine({ event }: { event: RunEvent }) {
   const kind = typeof event.payload?.kind === "string" ? event.payload.kind : undefined;
   const seq = String(event.seq).padStart(3, "0");
@@ -955,6 +965,7 @@ function EventLine({ event }: { event: RunEvent }) {
     return (
       <div className={`line ${event.level}`} style={{ opacity: 0.88 }}>
         <span className="seq">{seq}</span>
+        <span className="ts">{eventTime(event.createdAt)}</span>
         <span className="muted">[{event.source}]</span> <span className="badge">razonamiento</span>
         <details style={{ marginLeft: "1.2rem" }}>
           <summary style={{ cursor: "pointer" }}>ver razonamiento</summary>
@@ -971,6 +982,7 @@ function EventLine({ event }: { event: RunEvent }) {
     return (
       <div className={`line ${event.level}`}>
         <span className="seq">{seq}</span>
+        <span className="ts">{eventTime(event.createdAt)}</span>
         <span className="muted">[{event.source}]</span> <span className="badge accent">⚙ {tool}</span>{" "}
         {status && <span className="muted">{status}</span>}
         {hasDetail && (
@@ -985,6 +997,7 @@ function EventLine({ event }: { event: RunEvent }) {
   return (
     <div className={`line ${event.level}`}>
       <span className="seq">{seq}</span>
+      <span className="ts">{eventTime(event.createdAt)}</span>
       <span className="muted">[{event.source}]</span> <span style={{ whiteSpace: "pre-wrap" }}>{event.message}</span>
     </div>
   );

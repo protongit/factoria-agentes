@@ -95,16 +95,41 @@ export class OpenCodeExecutor implements AgentExecutor {
     let output = "";
     let usage: AgentRunResult["usage"];
     let streamError: string | null = null;
+    const idleWaiter: { resolve: (() => void) | null } = { resolve: null };
+    const sessionParents = new Map<string, string | null>();
 
     const captureError = (error: unknown) => {
       if (!error) return;
       const message =
         typeof error === "string"
           ? error
-          : (error as { message?: string; name?: string }).message ??
+          : (error as { data?: { message?: string }; message?: string; name?: string }).data?.message ??
+            (error as { message?: string; name?: string }).message ??
             (error as { name?: string }).name ??
             JSON.stringify(error);
       if (message) streamError = message;
+    };
+
+    /** ¿La sesión pertenece a esta ejecución? (la principal o una hija creada por `task`). */
+    const isOurSession = async (sid: string): Promise<boolean> => {
+      if (!sid) return false;
+      const seen = new Set<string>();
+      let current: string | null = sid;
+      while (current && !seen.has(current)) {
+        if (current === sessionId) return true;
+        seen.add(current);
+        if (!sessionParents.has(current)) {
+          try {
+            const res = await client.session.get({ path: { id: current } });
+            const data = res?.data ?? res;
+            sessionParents.set(current, data?.parentID ?? null);
+          } catch {
+            sessionParents.set(current, null);
+          }
+        }
+        current = sessionParents.get(current) ?? null;
+      }
+      return false;
     };
 
     const emitDelta = (kind: "text" | "reasoning", part: { id?: string; text?: string }, text: string) => {
@@ -118,13 +143,60 @@ export class OpenCodeExecutor implements AgentExecutor {
     };
 
     // Consumo de eventos en segundo plano (no bloquea el envío del prompt).
+    // No usamos `session.prompt` bloqueante: la petición HTTP esperaba el turno
+    // completo y superaba el timeout de 300 s de undici en turnos largos.
     void (async () => {
       try {
         const events = await client.event.subscribe();
         for await (const event of events.stream ?? []) {
           if (signal.aborted) break;
+          const type = event?.type;
           const props = event?.properties ?? {};
+
+          // Solicitudes de permiso: se responden siempre para que el turno no
+          // quede colgado esperando una decisión humana que aquí no existe.
+          if (type === "permission.updated") {
+            const perm = props as { id?: string; sessionID?: string; type?: string; pattern?: string | string[]; title?: string };
+            if (perm.sessionID && perm.id && (await isOurSession(perm.sessionID))) {
+              const decision = await (ctx.onPermission?.({
+                type: String(perm.type ?? "desconocido"),
+                pattern: perm.pattern,
+                title: perm.title,
+                sessionID: perm.sessionID,
+              }) ?? "reject");
+              try {
+                await client.postSessionIdPermissionsPermissionId({
+                  path: { id: perm.sessionID, permissionID: perm.id },
+                  body: { response: decision },
+                });
+                emit({
+                  type: "log",
+                  message: `Permiso «${perm.type ?? "desconocido"}» ${decision === "reject" ? "denegado" : "concedido"}${perm.pattern ? ` (${Array.isArray(perm.pattern) ? perm.pattern.join(", ") : perm.pattern})` : ""}`,
+                });
+              } catch (error) {
+                emit({ type: "log", message: `No se pudo responder al permiso: ${error instanceof Error ? error.message : String(error)}` });
+              }
+            }
+            continue;
+          }
+
           if (props.sessionID && props.sessionID !== sessionId) continue;
+
+          if (type === "session.idle") {
+            idleWaiter.resolve?.();
+            idleWaiter.resolve = null;
+            continue;
+          }
+
+          if (type === "session.status" && props.status?.type === "retry") {
+            emit({ type: "log", message: `El proveedor reintenta (intento ${props.status.attempt}): ${props.status.message}` });
+            continue;
+          }
+
+          if (type === "session.error") {
+            captureError(props.error);
+            continue;
+          }
 
           const info = props.info;
           if (info?.id && info?.role) messageRoles.set(info.id, info.role);
@@ -177,12 +249,17 @@ export class OpenCodeExecutor implements AgentExecutor {
     })();
 
     const attempts = Math.max(1, Number(process.env.AGENT_PROMPT_RETRIES ?? 2));
+    const stepTimeoutMs = Math.max(60000, Number(process.env.AGENT_STEP_TIMEOUT ?? 1800000));
     let lastError: string | null = null;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       streamError = null;
+      const idle = new Promise<"idle">((resolve) => {
+        idleWaiter.resolve = () => resolve("idle");
+      });
+
       try {
-        const res = await client.session.prompt({
+        const res = await client.session.promptAsync({
           path: { id: sessionId },
           body: {
             model: ctx.model,
@@ -190,40 +267,72 @@ export class OpenCodeExecutor implements AgentExecutor {
             parts: [{ type: "text", text: ctx.prompt }],
           },
         });
-        const data = res?.data ?? res;
-        if (data?.info?.error) captureError(data.info.error);
-        if (res?.error && !streamError) captureError(res.error);
-
-        // Fallback: si el stream no entregó texto, usa las partes finales del assistant.
-        if (!output) {
-          const parts = Array.isArray(data?.parts) ? data.parts : [];
-          const text = parts
-            .filter((p: { type?: string }) => p?.type === "text")
-            .map((p: { text?: string }) => p.text ?? "")
-            .join("");
-          if (text) output = text;
-        }
-
-        if (!streamError) {
-          emit({ type: "done", message: "completed" });
-          return { status: "succeeded", output, sessionRef: sessionId, usage };
-        }
-        lastError = streamError;
+        if (res?.error) captureError(res.error);
       } catch (error) {
+        idleWaiter.resolve = null;
         lastError = error instanceof Error ? error.message : String(error);
+        const transient = /fetch failed|timeout|econn|etimedout|network|overloaded|429|5\d\d/i.test(lastError);
+        if (attempt < attempts && transient) {
+          emit({ type: "log", message: `Reintentando el envío del prompt (${attempt}/${attempts}): ${lastError}` });
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+        emit({ type: "error", message: lastError });
+        return { status: "failed", output, sessionRef: sessionId, usage, error: lastError };
       }
 
-      const transient = /fetch failed|timeout|econn|etimedout|network|overloaded|429|5\d\d/i.test(lastError ?? "");
-      if (attempt < attempts && transient && !output) {
-        emit({ type: "log", message: `Reintentando tras error transitorio (${attempt}/${attempts}): ${lastError}` });
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        continue;
+      const timedOut = Symbol("timeout");
+      const outcome = await Promise.race([
+        idle.then(() => "idle" as const),
+        new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), stepTimeoutMs)),
+      ]);
+      idleWaiter.resolve = null;
+
+      if (outcome === timedOut) {
+        lastError = `El agente superó el tiempo máximo de ${Math.round(stepTimeoutMs / 60000)} min sin terminar; la sesión se ha cancelado.`;
+        try {
+          await client.session.abort({ path: { id: sessionId } });
+        } catch {
+          /* best-effort */
+        }
+        emit({ type: "error", message: lastError });
+        return { status: "failed", output, sessionRef: sessionId, usage, error: lastError };
       }
-      emit({ type: "error", message: lastError ?? "error desconocido" });
-      return { status: "failed", output, sessionRef: sessionId, usage, error: lastError ?? "error desconocido" };
+
+      // Fallback: si el stream no entregó texto, usa el último mensaje del assistant.
+      if (!output) {
+        output = await lastAssistantText(client, sessionId);
+      }
+
+      if (!streamError) {
+        emit({ type: "done", message: "completed" });
+        return { status: "succeeded", output, sessionRef: sessionId, usage };
+      }
+
+      lastError = streamError;
+      emit({ type: "error", message: lastError });
+      return { status: "failed", output, sessionRef: sessionId, usage, error: lastError };
     }
 
     emit({ type: "error", message: lastError ?? "error desconocido" });
     return { status: "failed", output, sessionRef: sessionId, usage, error: lastError ?? "error desconocido" };
+  }
+}
+
+/** Recupera el texto del último mensaje del asistente si el stream no lo entregó. */
+async function lastAssistantText(client: any, sessionId: string): Promise<string> {
+  try {
+    const res = await client.session.messages({ path: { id: sessionId } });
+    const list = res?.data ?? res;
+    if (!Array.isArray(list)) return "";
+    const assistants = list.filter((m: any) => m?.info?.role === "assistant");
+    const last = assistants[assistants.length - 1];
+    const parts = Array.isArray(last?.parts) ? last.parts : [];
+    return parts
+      .filter((p: any) => p?.type === "text")
+      .map((p: any) => p.text ?? "")
+      .join("");
+  } catch {
+    return "";
   }
 }

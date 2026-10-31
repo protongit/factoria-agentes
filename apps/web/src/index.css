@@ -207,6 +207,7 @@ button .spinner { width: 0.85rem; height: 0.85rem; border-width: 2px; }
 .log .line.warn { color: var(--warn); }
 .log .line.error { color: var(--err); }
 .log .seq { color: var(--faint); margin-right: 0.5rem; user-select: none; }
+.log .ts { color: var(--muted); margin-right: 0.5rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* --- Chat --- */
 .chat { display: flex; flex-direction: column; gap: 0.5rem; max-height: 420px; overflow: auto; padding: 0.5rem; }

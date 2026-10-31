@@ -3,6 +3,7 @@
 ## Eventos en vivo y catch-up
 
 - **`RunEvent`**: unidad de observabilidad. Campos: `runId`, `stepRunId?`, `seq` (monótono por run), `level`, `source` (`orchestrator`|`agent`|`system`|`tool`), `message`, `payload`, `createdAt`.
+- La UI muestra **fecha y hora** (`dd/mm hh:mm:ss`) en cada línea del stream, además del `seq`, el nivel y el origen.
 - Se persisten **siempre** (haya o no cliente), lo que garantiza el histórico.
 - **API**:
   - `GET /runs/:id/events?sinceSeq=N` → histórico desde la última posición vista.
@@ -49,8 +50,18 @@ Los contratos se **re-verifican siempre** al pasar por `contract_check` y al cer
 - Contadores de tokens y coste acumulado, con presupuesto.
 - Cola de aprobaciones pendientes.
 
-## Notificaciones
+## Asistente y log de ejecución
 
+El contexto del asistente incluye, además de la definición del proyecto:
+
+- Las **últimas 5 ejecuciones** con estado y fechas.
+- Los **pasos fallidos** de la última ejecución con su error persistido.
+- La **secuencia reciente** de eventos relevantes (nivel `error`/`warn`, orquestador y texto del agente) con fecha y hora.
+
+Con ello puede responder a preguntas como «¿por qué falló la ejecución?» citando
+el paso, el motivo y el momento exactos.
+
+## Notificaciones
 Avisos proactivos al usuario, independientes de que esté mirando la ejecución:
 
 - **Fuente**: `GET /api/notifications` agrega, para los proyectos del usuario autenticado, las ejecuciones de los últimos 7 días que están **fallidas**, **terminadas**, **canceladas** o **esperando aprobación humana**. Incluye paso, motivo real (error del paso o último evento `error`) y pasos siguientes.
